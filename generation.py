@@ -9,19 +9,19 @@ from train_process import *
 
 if __name__ == '__main__':
     #读入源文件和目标文件
-    #这是为了获取里面所有的单词，继而生成字典
+    #这是为了获取里面所有的词，继而生成字典
     source_text,  vocab2int, int2vocab = loadData('train_subtile.txt', 'source')
     target_text,  _, _ = loadData('test_subtile.txt', 'target')
 
 
-    #测试单词
-    input_word = '你认为有可能是植物？'
+    #测试的输入句子
+    input_sentence = '你认为有可能是植物？'
     #得到最大长度
-    max_length = len(input_word)
+    max_length = len(input_sentence)
     #进行填充，实际上如果单词长度就是最大长度的话，不填充也行
-    text = [vocab2int.get(char, vocab2int['<UNK>']) for char in jieba.lcut(input_word,cut_all=False)] + [vocab2int['<PAD>']] * (max_length - len(input_word))
+    text = [vocab2int.get(char, vocab2int['<UNK>']) for char in jieba.lcut(input_sentence,cut_all=False)] + [vocab2int['<PAD>']] * (max_length - len(input_sentence))
     #打印输入的文字
-    print(input_word)
+    print(input_sentence)
 
     loaded_graph  = tf.Graph()
     with tf.Session(graph=loaded_graph) as sess:
@@ -38,8 +38,8 @@ if __name__ == '__main__':
 
         feed = {
             input_data:[text] * batch_size,
-            encoder_sequence_length:[len(input_word)] * batch_size,
-            decoder_sequence_length:[len(input_word)] * batch_size,
+            encoder_sequence_length:[len(input_sentence)] * batch_size,
+            decoder_sequence_length:[len(input_sentence)] * batch_size,
         }
 
         #喂数据，预测
