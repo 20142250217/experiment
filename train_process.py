@@ -19,11 +19,6 @@ def loadData(fileName, fileType='source'):
             vocab_list.append(item)
     vocab_list=list(set(vocab_list))
     print(len(vocab_list))
-    #遍历文本所有内容，将单词抽取出来生成词汇表
-    #vocab_list = list(set(word for word in text))
-    #对词汇表进行排序
-    #因为在生成词汇表的时候使用了集合，不能保证每次运行得到的词汇顺序一直
-    #所以要进行排序，固定词汇顺序，保证后续不同运行时生成的单词和其对应索引一致
     vocab_list.sort()
 
     #特殊字符，分别为GO：一个文本的开始   EOS：一个文本的技术   PAD：文本填充字符  UNK：未知字符
@@ -90,8 +85,6 @@ def create_model(vocab_size, embeding_size, rnn_size, num_layers, vocab2int, bat
             = get_input()
 
         #随机生成词嵌入矩阵，矩阵内元素在训练过程中会得到训练
-        #实际上也可网上下载现成的词嵌入矩阵直接用于训练会更好，在本项目中主要的学习重点不在这里，所以就不整了
-        #下一个自动生成摘要的项目中，使用的是现成的词嵌入矩阵
         embedings = tf.Variable(tf.random_normal(shape=(vocab_size, embeding_size), stddev=0.1))
         #使用embedding_lookup在词嵌入矩阵中找到单词所对应的单词向量
         encode_input = tf.nn.embedding_lookup(embedings, input_data, name='encode_input')
@@ -101,14 +94,6 @@ def create_model(vocab_size, embeding_size, rnn_size, num_layers, vocab2int, bat
         #提交
         #encoder_final_state是最后一个节点输出的状态，也就是解码中的输入
         _, encoder_final_state = tf.nn.dynamic_rnn(cell, encode_input, sequence_length=encoder_sequence_length, dtype=tf.float32)
-
-        #decode分为训练和预测两种模式
-        #可以把lstm想象成一条链，每一个节点的输出是下一个节点的输入，但是在训练过程中可能会出现一个问题：例如当第一个节点
-        #刚开始训练的时候，可能输出的是错的，那么第二个节点的输入就已经错了，很难再输出对的，没有办法进行一个有效的训练
-        #所以在seq2seq模型中，模型的decode通常会分为两部分
-        #在训练过程中，配合标签进行使用，每一个lstm节点的输出不再作为下一个节点的输入，而是将标签作为下一个节点的输入，
-        #这样保证在训练过程中每一个节点的输入都是正确的，每一个节点都能得到有效的训练。
-        #在预测过程中，节点的输出再次作为下一个节点的输入
 
         #在训练过程中，需要给定标签，作为下一个节点的输入
         #但是decode层中第一个节点的输入，应该是GO，表示一个文本开始了
@@ -158,12 +143,12 @@ def create_model(vocab_size, embeding_size, rnn_size, num_layers, vocab2int, bat
         train_logits = tf.identity(train_decoder_output.rnn_output, name='logits')
         #预测输出的结果，是一个具体的索引值
         #（实际上也是一个向量，输出的字符应该多长，这里的编码就多长，每一个位置放的是该位置字符的索引）
-        #例如输入cba， 输出应该是abc
+        
         #train_logits输出的可能是是  [0.8, 0.1, 0,05, 0, 0. ....], [0.05, 0.6, 0.3, 0, 0. ...], [0.01, 0.2, 0.7, 0, ....]
-        #predict_logits输出的可能是 [0, 1, 2]   分别表示 [a， b， c]
+        #predict_logits输出的可能是 [0, 1, 2]   即每一个向量最大值对应的那个下标索引
         predict_logits = tf.identity(test_decoder_output.sample_id, name='predictions')
 
-        #tf.sequence_mask的用法百度能更说的清一点，建议百度一下
+        #tf.sequence_mask
         #实际上作的就是对于每一个输出来说，要计算损失，但是一般文本都或多或少会有一些pad填充项，mask的作用是为了让
         #pad的位置不参与loss的计算，比如说decode的输出长度时10，文本实际长度时5，那么计算损失的时候，就只计算前5项
         mask = tf.sequence_mask(decoder_sequence_length, decoder_sequence_max_length, dtype=tf.float32)
@@ -225,7 +210,7 @@ def get_batch(input_data, target, batch_size, vocab2int):
         #依据最大值，将输出文本进行一个填充
        batch_target = np.array([sample + [vocab2int['<PAD>']] * (target_max_length - len(sample)) for sample in batch_target], dtype=np.int32)
 
-        #百度yield，这是构造一个生成器
+        
        yield batch_input, input_length, batch_target, target_length
 
 epochs = 50
@@ -244,7 +229,7 @@ def extract_character_vocab(data):
     special_words = ['<PAD>', '<UNK>', '<GO>',  '<EOS>']
 
     set_words = list(set([character for line in data.split('\n') for character in line]))
-    # 这里要把四个特殊字符添加进词典
+    # 把四个特殊字符添加进词典
     int_to_vocab = {idx: word for idx, word in enumerate(special_words + set_words)}
     vocab_to_int = {word: idx for idx, word in int_to_vocab.items()}
 
